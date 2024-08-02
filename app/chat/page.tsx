@@ -27,12 +27,6 @@ export default function Home() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
-    const swapLanguages = () => {
-        const temp = fromLang;
-        setFromLang(toLang);
-        setToLang(temp);
-    };
-
     const handleFromLang = (event: any) => {
         console.log(event.target.value)
         setFromLang(event.target.value);
@@ -85,7 +79,7 @@ export default function Home() {
 
     const handleSubmit = async (userMessage: string) => {
         if (!userMessage) return;
-        setMessages(prevMessages => [...prevMessages, { role: 'models', content: userMessage }]);
+        setMessages(prevMessages => [...prevMessages, { role: 'user', content: userMessage }]);
 
         const requestData = {
             userMessage: userMessage,
@@ -114,6 +108,10 @@ export default function Home() {
         <div className="p-4 mb-4">
             <div className="bg-white shadow-md p-4 z-10">
                 <h1>会話アプリ</h1>
+                <input type="text" className="border p-3" />
+                <button className="p-2 bg-blue-500 text-white rounded mt-4">
+                    翻訳(Translate)
+                </button>
                 <div>
                     <select id="from-language" className="mx-3 p-3" value={fromLang} onChange={handleFromLang}>
                         {languages.map((language) => (
@@ -122,9 +120,7 @@ export default function Home() {
                             </option>
                         ))}
                     </select>
-                    <button onClick={swapLanguages} className="mx-3 p-3">
-                        →
-                    </button>
+                    →
                     <select id="to-language" className="mx-3 p-3" value={toLang} onChange={handleToLang}>
                         {languages.map((language) => (
                             <option key={language.code} value={language.code}>
