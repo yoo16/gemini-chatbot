@@ -85,7 +85,7 @@ export default function Home() {
 
     const handleSubmit = async (userMessage: string) => {
         if (!userMessage) return;
-        setMessages(prevMessages => [...prevMessages, { role: 'models', content: userMessage }]);
+        setMessages(prevMessages => [...prevMessages, { role: 'user', content: userMessage }]);
 
         const requestData = {
             userMessage: userMessage,
@@ -99,7 +99,8 @@ export default function Home() {
             // Translate
             const res = await axios.post('/api/translate', requestData);
             if (res?.data.translate) {
-                setMessages(prevMessages => [...prevMessages, { role: 'models', content: res.data.translate }]);
+                const botMessage:Message = { role: 'models', content: res.data.translate };
+                setMessages(prevMessages => [...prevMessages, botMessage]);
                 // Speach
                 console.log(res.data.translate)
                 handleSpeak(res.data.translate);
