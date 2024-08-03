@@ -10,16 +10,12 @@ export async function POST(req: NextRequest) {
     const message = await req.json();
     if (!message) return;
 
-    // const botMessage:Message = { role: "bot", content: "Hello" };
-    // return NextResponse.json(botMessage);
-
     const API_KEY = process.env.GEMINI_API_KEY;
     if (!API_KEY) return;
     try {
         const genAI = new GoogleGenerativeAI(API_KEY);
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        // history.push({ role: 'user', parts: message.content });
         const chat = model.startChat(
             {
                 history: history,
@@ -29,10 +25,10 @@ export async function POST(req: NextRequest) {
             }
         );
         const result = await chat.sendMessage(message.content);
-
-        const botContent = result.response.text();
-        const botMessage: Message = { role: "models", content: botContent };
-
+        const botMessage: Message = {
+            role: "models",
+            content: result.response.text(),
+        };
         return NextResponse.json(botMessage);
     } catch (error) {
         return NextResponse.json({ error: 'GoogleGenerativeAI error' }, { status: 500 });
