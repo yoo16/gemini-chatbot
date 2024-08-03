@@ -9,6 +9,8 @@ import { translateText } from '../services/TranslateService';
 
 export default function Home() {
     const [messages, setMessages] = useState<Message[]>([]);
+    const [message, setMessage] = useState<Message>();
+    const [translateMessage, setTranslateMessage] = useState<string>('');
     const [isListening, setIsListening] = useState<boolean>(false);
     const [recognition, setRecognition] = useState<any>(null);
     const [fromLang, setFromLang] = useState<string>('ja-JP');
@@ -29,16 +31,6 @@ export default function Home() {
         setToLang(event.target.value);
     };
 
-    // const handleSpeak = (text: string) => {
-    //     if ('speechSynthesis' in window) {
-    //         const utterance = new SpeechSynthesisUtterance(text);
-    //         utterance.lang = toLang;
-    //         window.speechSynthesis.speak(utterance);
-    //     } else {
-    //         setError('Your browser does not support speech synthesis.');
-    //     }
-    // };
-
     const translate = () => {
         if ('webkitSpeechRecognition' in window) {
             const speechRecognition = new (window as any).webkitSpeechRecognition();
@@ -55,8 +47,9 @@ export default function Home() {
             };
 
             speechRecognition.onresult = (event: any) => {
-                const transcript = event.results[0][0].transcript;
-                handleSubmit(transcript);
+                // console.log(event.results[0][0].transcript)
+                const message:Message = { role: 'user', content: event.results[0][0].transcript }
+                handleQuestion(message);
             };
             setRecognition(speechRecognition);
         } else {
@@ -70,36 +63,58 @@ export default function Home() {
         }
     };
 
-    const handleSubmit = async (userMessage: string) => {
-        if (!userMessage) return;
+
+    const handleKeyDown = useCallback((event: KeyboardEvent) => {
+        if (event.key === ' ') {
+            swapLanguages();
+            event.preventDefault();
+        } else if (event.key === 'Enter') {
+            handleVoiceInput();
+        }
+    }, [handleVoiceInput, swapLanguages]);
+
+
+    const handleQuestion = async (message: Message) => {
+        setError('');
+        console.log(message)
+        if (!message) return;
         try {
-            setMessages(prevMessages => [{ role: 'user', content: userMessage }, ...prevMessages]);
+            setMessages(prevMessages => [message, ...prevMessages]);
+            const fromLangCode = (message.role === 'partner') ? toLang : fromLang;
+            const toLangCode = (message.role === 'partner') ? fromLang : toLang;
             const requestData = {
-                userMessage: userMessage,
-                fromLangCode: fromLang,
-                toLangCode: toLang,
+                userMessage: message.content,
+                fromLangCode: fromLangCode,
+                toLangCode: toLangCode,
             }
             const result = await translateText(requestData);
             if (result.error) {
                 setError(result.error);
             } else if (result.translate) {
-                const botMessage: Message = { role: 'models', content: result.translate };
+                const role = (message.role === 'partner') ? 'partner' : 'user';
+                const botMessage: Message = { role: role, content: result.translate };
+                setTranslateMessage(result.translate);
                 setMessages(prevMessages => [botMessage, ...prevMessages]);
-                handleSpeak(result.translate, toLang, setError);
+                handleSpeak(result.translate, toLangCode, setError);
             }
         } catch (error) {
             setError('Error fetching response:');
         }
     };
 
-    const handleKeyDown = useCallback((event: KeyboardEvent) => {
-        if (event.key === ' ') {
-            swapLanguages();
-        } else if (event.key === 'Enter') {
-            handleVoiceInput();
+    const handleAnswer = async (message:Message) => {
+        try {
+            const response = await axios.post('/api/chat', message);
+            console.log(response.data)
+            const sendMessage = {
+                role: message.role,
+                content: response.data.content,
+            }
+            handleQuestion(sendMessage);
+        } catch (err) {
+            setError('Chat error');
         }
-        event.preventDefault();
-    }, [handleVoiceInput, swapLanguages]);
+    }
 
     useEffect(() => {
         translate();
@@ -142,8 +157,15 @@ export default function Home() {
                 }
 
                 <button onClick={handleVoiceInput} className="p-2 bg-blue-500 text-white rounded mt-4">
-                    {isListening ? 'Listening...' : '音声入力'}
+                    {isListening ? 'Listening...' : 'Input voice'}
+                    <span className="m-2">
+                        [Enter]
+                    </span>
                 </button>
+
+                <div className="text-3xl my-3 p-5 bg-gray-100 text-gray-800">
+                    {translateMessage}
+                </div>
             </div>
 
             <div className="flex flex-col">
@@ -155,7 +177,13 @@ export default function Home() {
                                 'bg-blue-100 text-blue-800 self-start' :
                                 'bg-gray-100 text-gray-800 self-end'
                             }
-                        `}><span>{message.content}</span>
+                        `}>
+                        <span>{message.content}</span>
+                        <button onClick={() => handleAnswer(message)}
+                            className="bg-blue-500 text-white mx-1 p-2 rounded text-xs"
+                            >
+                            AI answer
+                        </button>
                     </div>
                 ))}
             </div>

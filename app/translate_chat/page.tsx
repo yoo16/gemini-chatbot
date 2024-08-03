@@ -5,7 +5,6 @@ import axios from 'axios';
 import { Message } from '@/app/interfaces/Message';
 import { languages } from '@/app/components/Lang';
 import io from 'socket.io-client';
-import { translate } from '@/app/services/TranslateService';
 
 export default function Home() {
     const [messages, setMessages] = useState<Message[]>([]);
@@ -28,9 +27,6 @@ export default function Home() {
             try {
                 const res = await axios.post('/api/translate', requestData);
                 console.log(res.data.translate)
-
-                // const botMessage:Message = { role: 'models', content: message };
-                // setMessages(prevMessages => [...prevMessages, botMessage]);
 
                 const translateMessage:Message = { role: 'user', content: res.data.translate };
                 setMessages(prevMessages => [...prevMessages, translateMessage]);
@@ -172,7 +168,7 @@ export default function Home() {
                                 text-sm font-semibold
                             ${message.role === 'user' ? 'bg-blue-600' : 'bg-gray-600'}
                         `}>
-                            {message.role === 'user' ? 'あなた' : 'ボット'}
+                            {message.role === 'partner' ? 'あなた' : 'ボット'}
                         </span>
                         <span>{message.content}</span>
                     </div>

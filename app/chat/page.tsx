@@ -148,7 +148,7 @@ export default function Home() {
                                 text-sm font-semibold
                             ${message.role === 'user' ? 'bg-blue-600' : 'bg-gray-600'}
                         `}>
-                            {message.role === 'user' ? 'あなた' : 'ボット'}
+                            {message.role === 'user' ? 'あなた' : 'あいて'}
                         </span>
                         <span>{message.content}</span>
                     </div>
