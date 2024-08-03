@@ -30,12 +30,12 @@ export default function Home() {
     const handleSpeak = (text: string) => {
         if ('speechSynthesis' in window) {
             const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = toLang;
             window.speechSynthesis.speak(utterance);
         } else {
             setError('Your browser does not support speech synthesis.');
         }
     };
-
 
     const translate = () => {
         if ('webkitSpeechRecognition' in window) {
