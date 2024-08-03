@@ -1,36 +1,17 @@
 import axios from 'axios';
-import { Message } from '../interfaces/Message';
+import { Message } from '@/app/interfaces/Message';
 
 interface TranslateConfig {
-    transcription: string;
-    fromLang: string;
-    toLang: string;
-    setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
-    setError: React.Dispatch<React.SetStateAction<string>>;
+    userMessage: string;
+    fromLangCode: string;
+    toLangCode: string;
 }
 
-export const translateText = async ({
-    transcription,
-    fromLang,
-    toLang,
-    setMessages,
-    setError,
-}: TranslateConfig) => {
-    if (transcription) {
-        try {
-            const response = await axios.post('/api/translate', {
-                userMessage: transcription,
-                fromLangCode: fromLang,
-                toLangCode: toLang,
-            });
-            if (response?.data?.error) {
-                setError(response.data.error);
-            } else if (response?.data?.translate) {
-                const botMessage: Message = { role: 'models', content: response.data.translate };
-                setMessages((prevMessages) => [botMessage, ...prevMessages]);
-            }
-        } catch (err) {
-            setError('Translation error');
-        }
+export const translateText = async (requestData: TranslateConfig) => {
+    try {
+        const response = await axios.post('/api/translate', requestData);
+        return response?.data;
+    } catch (err) {
+        return { error: 'Translation error' };
     }
 };

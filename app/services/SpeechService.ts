@@ -1,5 +1,6 @@
 export interface SpeechRecognitionConfig {
     lang: string;
+    transcript: string;
     onResult: (transcript: string) => void;
     onError: (error: string) => void;
     onStart?: () => void;

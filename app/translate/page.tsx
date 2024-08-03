@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, ReactElement, ReactHTML, useCallback } fro
 import axios from 'axios';
 import { Message } from '../interfaces/Message';
 import { languages, getLanguageName } from '@/app/components/Lang';
+import { handleSpeak, initializeSpeechRecognition } from '../services/SpeechService';
+import { translateText } from '../services/TranslateService';
 
 export default function Home() {
     const [messages, setMessages] = useState<Message[]>([]);
@@ -27,15 +29,15 @@ export default function Home() {
         setToLang(event.target.value);
     };
 
-    const handleSpeak = (text: string) => {
-        if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = toLang;
-            window.speechSynthesis.speak(utterance);
-        } else {
-            setError('Your browser does not support speech synthesis.');
-        }
-    };
+    // const handleSpeak = (text: string) => {
+    //     if ('speechSynthesis' in window) {
+    //         const utterance = new SpeechSynthesisUtterance(text);
+    //         utterance.lang = toLang;
+    //         window.speechSynthesis.speak(utterance);
+    //     } else {
+    //         setError('Your browser does not support speech synthesis.');
+    //     }
+    // };
 
     const translate = () => {
         if ('webkitSpeechRecognition' in window) {
@@ -70,24 +72,20 @@ export default function Home() {
 
     const handleSubmit = async (userMessage: string) => {
         if (!userMessage) return;
-        setMessages(prevMessages => [{ role: 'user', content: userMessage }, ...prevMessages]);
-
-        const requestData = {
-            userMessage: userMessage,
-            fromLangCode: fromLang,
-            toLangCode: toLang,
-        }
-
-        console.log(requestData)
-
         try {
-            const res = await axios.post('/api/translate', requestData);
-            if (res?.data?.error) {
-                setError(res.data.error);
-            } else if (res?.data?.translate) {
-                const botMessage: Message = { role: 'models', content: res.data.translate };
+            setMessages(prevMessages => [{ role: 'user', content: userMessage }, ...prevMessages]);
+            const requestData = {
+                userMessage: userMessage,
+                fromLangCode: fromLang,
+                toLangCode: toLang,
+            }
+            const result = await translateText(requestData);
+            if (result.error) {
+                setError(result.error);
+            } else if (result.translate) {
+                const botMessage: Message = { role: 'models', content: result.translate };
                 setMessages(prevMessages => [botMessage, ...prevMessages]);
-                handleSpeak(res.data.translate);
+                handleSpeak(result.translate, toLang, setError);
             }
         } catch (error) {
             setError('Error fetching response:');
