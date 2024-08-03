@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef, ReactElement, ReactHTML } from 'react';
+import { useState, useEffect, useRef, ReactElement, ReactHTML, useCallback } from 'react';
 import axios from 'axios';
 import { Message } from '../interfaces/Message';
 import { languages, getLanguageName } from '@/app/components/Lang';
-import { translate } from '@/app/services/TranslateService';
 
 export default function Home() {
     const [messages, setMessages] = useState<Message[]>([]);
@@ -13,20 +12,6 @@ export default function Home() {
     const [fromLang, setFromLang] = useState<string>('ja-JP');
     const [toLang, setToLang] = useState<string>('en-US');
     const [error, setError] = useState<string>('');
-
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        translate();
-    }, [fromLang, toLang]);
-
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
-
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
 
     const swapLanguages = () => {
         const temp = fromLang;
@@ -50,6 +35,7 @@ export default function Home() {
             setError('Your browser does not support speech synthesis.');
         }
     };
+
 
     const translate = () => {
         if ('webkitSpeechRecognition' in window) {
@@ -84,7 +70,7 @@ export default function Home() {
 
     const handleSubmit = async (userMessage: string) => {
         if (!userMessage) return;
-        setMessages(prevMessages => [...prevMessages, { role: 'user', content: userMessage }]);
+        setMessages(prevMessages => [{ role: 'user', content: userMessage }, ...prevMessages]);
 
         const requestData = {
             userMessage: userMessage,
@@ -95,13 +81,12 @@ export default function Home() {
         console.log(requestData)
 
         try {
-            // Translate
             const res = await axios.post('/api/translate', requestData);
             if (res?.data?.error) {
                 setError(res.data.error);
             } else if (res?.data?.translate) {
                 const botMessage: Message = { role: 'models', content: res.data.translate };
-                setMessages(prevMessages => [...prevMessages, botMessage]);
+                setMessages(prevMessages => [botMessage, ...prevMessages]);
                 handleSpeak(res.data.translate);
             }
         } catch (error) {
@@ -109,6 +94,25 @@ export default function Home() {
         }
     };
 
+    const handleKeyDown = useCallback((event: KeyboardEvent) => {
+        if (event.key === ' ') {
+            swapLanguages();
+        } else if (event.key === 'Enter') {
+            handleVoiceInput();
+        }
+        event.preventDefault();
+    }, [handleVoiceInput, swapLanguages]);
+
+    useEffect(() => {
+        translate();
+    }, [fromLang, toLang]);
+
+    useEffect(() => {
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [handleKeyDown]);
 
     return (
         <div className="p-4 mb-4">
@@ -150,14 +154,13 @@ export default function Home() {
                         key={index}
                         className={`m-3 p-5 w-1/2 rounded-lg shadow-md
                                 ${message.role === 'user' ?
-                                'bg-blue-100 text-blue-800 self-start' : 
+                                'bg-blue-100 text-blue-800 self-start' :
                                 'bg-gray-100 text-gray-800 self-end'
                             }
                         `}><span>{message.content}</span>
                     </div>
                 ))}
             </div>
-            <div ref={messagesEndRef} />
         </div>
     );
 }

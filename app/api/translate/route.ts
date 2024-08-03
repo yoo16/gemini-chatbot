@@ -1,6 +1,6 @@
 import { getLanguageName } from "@/app/components/Lang";
 import { NextRequest, NextResponse } from "next/server";
-import { translate } from "@/app/services/TranslateService";
+import { translate } from "@/app/services/TranslateAIService";
 
 export async function POST(req: NextRequest) {
     const requestData = await req.json();

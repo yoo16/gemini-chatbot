@@ -1,28 +1,36 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import axios from 'axios';
+import { Message } from '../interfaces/Message';
 
-const API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = 'gemini-1.5-flash';
-
-if (!API_KEY) {
-    throw new Error("API key is not set");
+interface TranslateConfig {
+    transcription: string;
+    fromLang: string;
+    toLang: string;
+    setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
+    setError: React.Dispatch<React.SetStateAction<string>>;
 }
 
-const genAI = new GoogleGenerativeAI(API_KEY);
-const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-model.generationConfig.maxOutputTokens = 2048;
-
-export async function translate(fromLang: string, toLang: string, userMessage: string) {
-    const prompt = `Please translate from ${fromLang} to ${toLang} 
-                    without bracket character.
-                    If it cannot be translated, 
-                    please return it as it cannot be translated in ${toLang}.
-                    \n ${userMessage}`;
-
-    try {
-        const result = await model.generateContent(prompt);
-        const text = result.response.text();
-        return { original: userMessage, translate: text };
-    } catch (error) {
-        throw new Error('Translate Error');
+export const translateText = async ({
+    transcription,
+    fromLang,
+    toLang,
+    setMessages,
+    setError,
+}: TranslateConfig) => {
+    if (transcription) {
+        try {
+            const response = await axios.post('/api/translate', {
+                userMessage: transcription,
+                fromLangCode: fromLang,
+                toLangCode: toLang,
+            });
+            if (response?.data?.error) {
+                setError(response.data.error);
+            } else if (response?.data?.translate) {
+                const botMessage: Message = { role: 'models', content: response.data.translate };
+                setMessages((prevMessages) => [botMessage, ...prevMessages]);
+            }
+        } catch (err) {
+            setError('Translation error');
+        }
     }
-}
+};
