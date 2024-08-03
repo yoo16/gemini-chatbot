@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, ReactElement, ReactHTML, useCallback } from 'react';
 import axios from 'axios';
+import { useState, useEffect, useRef, ReactElement, ReactHTML, useCallback } from 'react';
 import { Message } from '../interfaces/Message';
 import { languages, getLanguageName } from '@/app/components/Lang';
 import { handleSpeak, initializeSpeechRecognition } from '../services/SpeechService';
@@ -49,7 +49,7 @@ export default function Home() {
             speechRecognition.onresult = (event: any) => {
                 // console.log(event.results[0][0].transcript)
                 const message:Message = { role: 'user', content: event.results[0][0].transcript }
-                handleQuestion(message);
+                handleTranslate(message, fromLang, toLang);
             };
             setRecognition(speechRecognition);
         } else {
@@ -74,14 +74,11 @@ export default function Home() {
     }, [handleVoiceInput, swapLanguages]);
 
 
-    const handleQuestion = async (message: Message) => {
+    const handleTranslate = async (message: Message, fromLangCode:string, toLangCode:string) => {
         setError('');
-        console.log(message)
         if (!message) return;
         try {
             setMessages(prevMessages => [message, ...prevMessages]);
-            const fromLangCode = (message.role === 'partner') ? toLang : fromLang;
-            const toLangCode = (message.role === 'partner') ? fromLang : toLang;
             const requestData = {
                 userMessage: message.content,
                 fromLangCode: fromLangCode,
@@ -91,7 +88,7 @@ export default function Home() {
             if (result.error) {
                 setError(result.error);
             } else if (result.translate) {
-                const role = (message.role === 'partner') ? 'partner' : 'user';
+                const role = (message.role === 'partner') ? 'user' : 'partner';
                 const botMessage: Message = { role: role, content: result.translate };
                 setTranslateMessage(result.translate);
                 setMessages(prevMessages => [botMessage, ...prevMessages]);
@@ -104,13 +101,15 @@ export default function Home() {
 
     const handleAnswer = async (message:Message) => {
         try {
+            console.log(message)
             const response = await axios.post('/api/chat', message);
             console.log(response.data)
             const sendMessage = {
                 role: message.role,
                 content: response.data.content,
             }
-            handleQuestion(sendMessage);
+            console.log(sendMessage)
+            handleTranslate(sendMessage, toLang, fromLang);
         } catch (err) {
             setError('Chat error');
         }
