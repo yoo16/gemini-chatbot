@@ -67,7 +67,7 @@ export const handleSpeak = (
         };
 
         utterance.onerror = () => {
-            setError('Speech synthesis error.');
+            // setError('Speech synthesis error.');
             setIsSpeaking(false);
         };
 

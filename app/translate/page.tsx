@@ -6,13 +6,17 @@ import { Message } from '@/app/interfaces/Message';
 import { getLanguageName, languages } from '@/app/components/Lang';
 import { handleSpeak, initializeSpeechRecognition, SpeechRecognitionConfig } from '../services/SpeechService';
 import { translateText } from '@/app/services/TranslateService';
-import { translate } from '@/app/services/TranslateAIService';
+import { FaMicrophone, FaArrowCircleRight, FaStop, FaSpinner } from 'react-icons/fa';
+import { HiMiniSpeakerWave } from 'react-icons/hi2';
+import { AiOutlineOpenAI } from 'react-icons/ai';
+
 
 export default function Home() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [translateMessage, setTranslateMessage] = useState<string>('');
     const [isListening, setIsListening] = useState<boolean>(false);
     const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState<boolean>(false);
     const [recognition, setRecognition] = useState<any>(null);
     const [fromLang, setFromLang] = useState<string>('ja-JP');
     const [toLang, setToLang] = useState<string>('en-US');
@@ -88,7 +92,11 @@ export default function Home() {
 
     const handleTranslate = async (message: Message, toLang: string) => {
         setError('');
-        if (!message) return;
+        setIsLoading(true);
+        if (!message) {
+            setIsLoading(false);
+            return;
+        }
         try {
             setMessages(prevMessages => [message, ...prevMessages]);
             const result = await translateText(message, toLang);
@@ -103,10 +111,13 @@ export default function Home() {
             }
         } catch (error) {
             setError('Error fetching response:');
+        } finally {
+            setIsLoading(false);
         }
     };
 
     const handleAIAnswer = async (message: Message) => {
+        setIsLoading(true);
         try {
             const response = await axios.post('/api/chat', message);
             if (!response.data.error && response.data.message) {
@@ -114,6 +125,8 @@ export default function Home() {
             }
         } catch (err) {
             setError('Chat error');
+        } finally {
+            setIsLoading(false);
         }
     }
 
@@ -147,7 +160,7 @@ export default function Home() {
                         ))}
                     </select>
                     <button onClick={swapLanguages} className="mx-3 p-3">
-                        →
+                        <FaArrowCircleRight />
                     </button>
                     <select id="to-language" className="mx-3 p-3" value={toLang} onChange={handleToLang}>
                         {languages.map((language) => (
@@ -164,27 +177,31 @@ export default function Home() {
                     </div>
                 }
 
+                {isLoading && (
+                    <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
+                        <div className="bg-white p-8 rounded-lg shadow-lg flex flex-col items-center">
+                            <FaSpinner className="animate-spin text-4xl" />
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex space-x-4 mt-4">
-                    <button onClick={testTranslate} className="p-2 bg-orange-500 text-white rounded">
-                        Test Translate
+                    <button onClick={handleVoiceInput} className="p-2 bg-blue-500 text-white rounded">
+                        {isListening ? 'Listening...' : <FaMicrophone />}
                     </button>
 
-                    <button onClick={handleVoiceInput} className="p-2 bg-blue-500 text-white rounded">
-                        {isListening ? 'Listening...' : 'Input voice'}
-                        <span className="m-2">
-                            [Enter]
-                        </span>
-                    </button>
                     {isSpeaking && (
                         <button onClick={stopSpeech} className="p-2 bg-red-500 text-white rounded">
-                            Stop Speech
+                            <FaStop />
                         </button>
                     )}
                 </div>
 
                 {translateMessage &&
                     <div className="text-3xl my-3 p-5 bg-gray-100 text-gray-800">
-                        {translateMessage}
+                        <div>
+                            {translateMessage}
+                        </div>
                     </div>
                 }
             </div>
@@ -205,14 +222,14 @@ export default function Home() {
                         </span>
                         <div className="mt-2">
                             <button onClick={() => handleSpeak(message.content, message.lang, setError, setIsSpeaking)}
-                                className="bg-green-500 text-white mx-1 py-1 px-2 rounded text-xs"
+                                className="mx-1 px-2 rounded text-ms"
                             >
-                                Speech
+                                <HiMiniSpeakerWave />
                             </button>
                             <button onClick={() => handleAIAnswer(message)}
-                                className="bg-blue-500 text-white mx-1 py-1 px-2 rounded text-xs"
+                                className="mx-1 px-2 rounded text-ms"
                             >
-                                AI answer
+                                <AiOutlineOpenAI />
                             </button>
                         </div>
                     </div>
