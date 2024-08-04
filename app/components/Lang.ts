@@ -10,6 +10,7 @@ export const languages: Language[] = [
     { code: 'es-ES', name: 'Spanish' },
     { code: 'de-DE', name: 'German' },
     { code: 'zh-CN', name: 'Chinese' },
+    { code: 'vi-VN', name: 'Vietnam' },
 ];
 
 export function getLanguageName(code:string) {

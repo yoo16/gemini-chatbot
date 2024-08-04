@@ -1,7 +1,9 @@
+import { Message } from "@/app/interfaces/Message";
 export interface SpeechRecognitionConfig {
     lang: string;
-    transcript: string;
-    onResult: (transcript: string) => void;
+    fromLang: string;
+    toLang: string;
+    onResult: (message: Message, fromLangCode: string, toLangCode: string) => Promise<void>;
     onError: (error: string) => void;
     onStart?: () => void;
     onEnd?: () => void;
@@ -12,7 +14,9 @@ export function initializeSpeechRecognition(config: SpeechRecognitionConfig) {
         const recognition = new (window as any).webkitSpeechRecognition();
         recognition.continuous = false;
         recognition.interimResults = false;
-        recognition.lang = config.lang;
+        recognition.lang = config.toLang;
+        recognition.fromLang = config.fromLang;
+        recognition.toLang = config.toLang;
 
         recognition.onstart = () => {
             if (config.onStart) {
@@ -28,7 +32,10 @@ export function initializeSpeechRecognition(config: SpeechRecognitionConfig) {
 
         recognition.onresult = (event: any) => {
             const transcript = event.results[0][0].transcript;
-            config.onResult(transcript);
+            console.log("onresult:", transcript, config.fromLang, config.toLang)
+            if (transcript) {
+                config.onResult(transcript, config.fromLang, config.toLang);
+            }
         };
 
         recognition.onerror = (event: any) => {
@@ -46,6 +53,7 @@ export const handleSpeak = (
     lang: string,
     setError: React.Dispatch<React.SetStateAction<string>>
 ) => {
+    if (!text) return;
     if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = lang;

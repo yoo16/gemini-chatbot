@@ -41,7 +41,7 @@ export default function Home() {
         if (inputMessage.trim() === '' && selectedPrefecture === '' && startDate === '' && endDate === '') return;
 
         const userMessage: Message = {
-            role: 'models',
+            role: 'model',
             content: inputMessage +
                 (selectedPrefecture ? ` (${selectedPrefecture})` : '') +
                 (startDate ? ` Start Date: ${startDate}` : '') +
@@ -120,9 +120,9 @@ export default function Home() {
                             `inline-block mb-2 me-3 px-3 py-1 
                              rounded-full text-white 
                              text-sm font-semibold
-                             ${message.role === 'models' ? 'bg-blue-600' : 'bg-gray-600'}
+                             ${message.role === 'model' ? 'bg-blue-600' : 'bg-gray-600'}
                             `}>
-                            {message.role === 'models' ? 'あなた' : 'ボット'}
+                            {message.role === 'model' ? 'あなた' : 'ボット'}
                         </span>
                         <span>{message.content}</span>
                     </div>

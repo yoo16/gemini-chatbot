@@ -1,4 +1,4 @@
 export interface Message {
-    role: 'user' | 'partner' | 'models';
+    role: 'user' | 'partner' | 'model';
     content: string;
 }
