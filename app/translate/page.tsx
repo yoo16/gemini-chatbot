@@ -13,6 +13,7 @@ import { AiOutlineOpenAI } from 'react-icons/ai';
 
 export default function Home() {
     const [messages, setMessages] = useState<Message[]>([]);
+    const [message, setMessage] = useState<Message>();
     const [translateMessage, setTranslateMessage] = useState<string>('');
     const [isListening, setIsListening] = useState<boolean>(false);
     const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
@@ -104,6 +105,7 @@ export default function Home() {
                 setError(result.error);
             } else if (result.message) {
                 const translateMessage = result.message
+                setMessage(translateMessage);
                 translateMessage.role = (message.role === 'partner') ? 'user' : 'partner';
                 setTranslateMessage(translateMessage.content);
                 setMessages(prevMessages => [translateMessage, ...prevMessages]);
@@ -116,7 +118,8 @@ export default function Home() {
         }
     };
 
-    const handleAIAnswer = async (message: Message) => {
+    const handleAIAnswer = async (message?: Message) => {
+        if (!message) return;
         setIsLoading(true);
         try {
             const response = await axios.post('/api/chat', message);
@@ -190,6 +193,11 @@ export default function Home() {
                         {isListening ? 'Listening...' : <FaMicrophone />}
                     </button>
 
+                    <button onClick={() => handleAIAnswer(message)}
+                        className="mx-1 px-2 rounded text-ms"
+                    >
+                        <AiOutlineOpenAI />
+                    </button>
                     {isSpeaking && (
                         <button onClick={stopSpeech} className="p-2 bg-red-500 text-white rounded">
                             <FaStop />
@@ -226,11 +234,7 @@ export default function Home() {
                             >
                                 <HiMiniSpeakerWave />
                             </button>
-                            <button onClick={() => handleAIAnswer(message)}
-                                className="mx-1 px-2 rounded text-ms"
-                            >
-                                <AiOutlineOpenAI />
-                            </button>
+
                         </div>
                     </div>
                 ))}
