@@ -49,13 +49,15 @@ export async function POST(req: NextRequest) {
         const result = await chat.sendMessage(message.content);
         const content = result.response.text().replaceAll('*', '\n');
 
-        const botMessage: Message = {
-            role: message.role,
-            content: content,
-        };
-        return NextResponse.json(botMessage);
+        const data = {
+            message: {
+                role: message.role,
+                content: content,
+                lang: message.lang,
+            }
+        }
+        return NextResponse.json(data);
     } catch (error) {
-        // return NextResponse.json({ error: 'GoogleGenerativeAI error' });
-        return NextResponse.json({ error: error });
+        return NextResponse.json({ error: 'GoogleGenerativeAI error' });
     }
 }

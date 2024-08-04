@@ -51,12 +51,26 @@ export function initializeSpeechRecognition(config: SpeechRecognitionConfig) {
 export const handleSpeak = (
     text: string,
     lang: string,
-    setError: React.Dispatch<React.SetStateAction<string>>
+    setError: React.Dispatch<React.SetStateAction<string>>,
+    setIsSpeaking: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
-    if (!text) return;
     if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = lang;
+
+        utterance.onstart = () => {
+            setIsSpeaking(true);
+        };
+
+        utterance.onend = () => {
+            setIsSpeaking(false);
+        };
+
+        utterance.onerror = () => {
+            setError('Speech synthesis error.');
+            setIsSpeaking(false);
+        };
+
         window.speechSynthesis.speak(utterance);
     } else {
         setError('Your browser does not support speech synthesis.');

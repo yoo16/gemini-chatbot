@@ -3,14 +3,16 @@
 import axios from 'axios';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Message } from '@/app/interfaces/Message';
-import { languages } from '@/app/components/Lang';
+import { getLanguageName, languages } from '@/app/components/Lang';
 import { handleSpeak, initializeSpeechRecognition, SpeechRecognitionConfig } from '../services/SpeechService';
 import { translateText } from '@/app/services/TranslateService';
+import { translate } from '@/app/services/TranslateAIService';
 
 export default function Home() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [translateMessage, setTranslateMessage] = useState<string>('');
     const [isListening, setIsListening] = useState<boolean>(false);
+    const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
     const [recognition, setRecognition] = useState<any>(null);
     const [fromLang, setFromLang] = useState<string>('ja-JP');
     const [toLang, setToLang] = useState<string>('en-US');
@@ -46,8 +48,12 @@ export default function Home() {
             };
 
             speechRecognition.onresult = (event: any) => {
-                const message: Message = { role: 'user', content: event.results[0][0].transcript }
-                handleTranslate(message, fromLang, toLang);
+                const message: Message = {
+                    role: 'user',
+                    content: event.results[0][0].transcript,
+                    lang: fromLang,
+                }
+                handleTranslate(message, toLang);
             };
             setRecognition(speechRecognition);
         } else {
@@ -71,25 +77,29 @@ export default function Home() {
         }
     }, [handleVoiceInput, swapLanguages]);
 
-    const handleTranslate = async (message: Message, fromLangCode: string, toLangCode: string) => {
+    const testTranslate = async () => {
+        const message: Message = {
+            role: 'user',
+            content: 'こんにちは',
+            lang: 'ja-JP',
+        }
+        await handleTranslate(message, 'en-US');
+    }
+
+    const handleTranslate = async (message: Message, toLang: string) => {
         setError('');
         if (!message) return;
         try {
             setMessages(prevMessages => [message, ...prevMessages]);
-            const requestData = {
-                userMessage: message.content,
-                fromLangCode: fromLangCode,
-                toLangCode: toLangCode,
-            }
-            const result = await translateText(requestData);
+            const result = await translateText(message, toLang);
             if (result.error) {
                 setError(result.error);
-            } else if (result.translate) {
-                const role = (message.role === 'partner') ? 'user' : 'partner';
-                const botMessage: Message = { role: role, content: result.translate };
-                setTranslateMessage(result.translate);
-                setMessages(prevMessages => [botMessage, ...prevMessages]);
-                handleSpeak(result.translate, toLangCode, setError);
+            } else if (result.message) {
+                const translateMessage = result.message
+                translateMessage.role = (message.role === 'partner') ? 'user' : 'partner';
+                setTranslateMessage(translateMessage.content);
+                setMessages(prevMessages => [translateMessage, ...prevMessages]);
+                handleSpeak(translateMessage.content, translateMessage.lang, setError, setIsSpeaking);
             }
         } catch (error) {
             setError('Error fetching response:');
@@ -99,12 +109,8 @@ export default function Home() {
     const handleAIAnswer = async (message: Message) => {
         try {
             const response = await axios.post('/api/chat', message);
-            if (!response.data.error && response.data.content) {
-                const sendMessage = {
-                    role: message.role,
-                    content: response.data.content,
-                }
-                handleTranslate(sendMessage, toLang, fromLang);
+            if (!response.data.error && response.data.message) {
+                handleTranslate(response.data.message, fromLang);
             }
         } catch (err) {
             setError('Chat error');
@@ -114,6 +120,7 @@ export default function Home() {
     const stopSpeech = () => {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
+            setIsSpeaking(false)
         }
     };
 
@@ -158,15 +165,21 @@ export default function Home() {
                 }
 
                 <div className="flex space-x-4 mt-4">
+                    <button onClick={testTranslate} className="p-2 bg-orange-500 text-white rounded">
+                        Test Translate
+                    </button>
+
                     <button onClick={handleVoiceInput} className="p-2 bg-blue-500 text-white rounded">
                         {isListening ? 'Listening...' : 'Input voice'}
                         <span className="m-2">
                             [Enter]
                         </span>
                     </button>
-                    <button onClick={stopSpeech} className="p-2 bg-red-500 text-white rounded">
-                        Stop Speech
-                    </button>
+                    {isSpeaking && (
+                        <button onClick={stopSpeech} className="p-2 bg-red-500 text-white rounded">
+                            Stop Speech
+                        </button>
+                    )}
                 </div>
 
                 {translateMessage &&
@@ -187,11 +200,21 @@ export default function Home() {
                             }
                         `}>
                         <span>{message.content}</span>
-                        <button onClick={() => handleAIAnswer(message)}
-                            className="bg-blue-500 text-white mx-1 p-2 rounded text-xs"
-                        >
-                            AI answer
-                        </button>
+                        <span className="bg-gray-500 text-white mx-1 py-1 px-2 rounded text-xs">
+                            {getLanguageName(message.lang)}
+                        </span>
+                        <div className="mt-2">
+                            <button onClick={() => handleSpeak(message.content, message.lang, setError, setIsSpeaking)}
+                                className="bg-green-500 text-white mx-1 py-1 px-2 rounded text-xs"
+                            >
+                                Speech
+                            </button>
+                            <button onClick={() => handleAIAnswer(message)}
+                                className="bg-blue-500 text-white mx-1 py-1 px-2 rounded text-xs"
+                            >
+                                AI answer
+                            </button>
+                        </div>
                     </div>
                 ))}
             </div>
