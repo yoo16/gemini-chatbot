@@ -7,17 +7,9 @@ import { languages, getLanguageName } from '@/app/components/Lang';
 
 export default function Home() {
     const [messages, setMessages] = useState<Message[]>([]);
-    const [isListening, setIsListening] = useState<boolean>(false);
-    const [recognition, setRecognition] = useState<any>(null);
-    const [fromLang, setFromLang] = useState<string>('ja-JP');
-    const [toLang, setToLang] = useState<string>('en-US');
-    const [speechSupported, setSpeechSupported] = useState(false);
+    const [message, setMessage] = useState<Message>();
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        translate();
-    }, [fromLang, toLang]);
 
     useEffect(() => {
         scrollToBottom();
@@ -27,76 +19,30 @@ export default function Home() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
-    const handleFromLang = (event: any) => {
-        console.log(event.target.value)
-        setFromLang(event.target.value);
+    const handleInputText = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const inputText = e.target.value;
+        // console.log(inputText);
+        const message: Message = {
+            role: 'user',
+            content: inputText,
+            lang: 'ja-JP',
+        }
+        setMessage(message);
     };
 
-    const handleToLang = (event: any) => {
-        console.log(event.target.value)
-        setToLang(event.target.value);
-    };
-
-    const handleSpeak = (text: string) => {
-        if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(text);
-            window.speechSynthesis.speak(utterance);
-        } else {
-            alert('Your browser does not support speech synthesis.');
-        }
-    };
-
-    const translate = () => {
-        if ('webkitSpeechRecognition' in window) {
-            const speechRecognition = new (window as any).webkitSpeechRecognition();
-            speechRecognition.continuous = false;
-            speechRecognition.interimResults = false;
-            speechRecognition.lang = fromLang;
-
-            speechRecognition.onstart = () => {
-                setIsListening(true);
-            };
-
-            speechRecognition.onend = () => {
-                setIsListening(false);
-            };
-
-            speechRecognition.onresult = (event: any) => {
-                const transcript = event.results[0][0].transcript;
-                handleSubmit(transcript);
-            };
-            setRecognition(speechRecognition);
-        } else {
-            alert('Web Speech API is not supported in this browser.');
-        }
-    }
-
-    const handleVoiceInput = () => {
-        if (recognition) {
-            recognition.start();
-        }
-    };
-
-    const handleSubmit = async (userMessage: string) => {
-        if (!userMessage) return;
-        setMessages(prevMessages => [...prevMessages, { role: 'user', content: userMessage }]);
-
-        const requestData = {
-            userMessage: userMessage,
-            fromLangCode: fromLang,
-            toLangCode: toLang,
-        }
-
-        console.log(requestData)
+    const handleSubmit = async () => {
+        console.log("handleSubmit:", message)
+        if (!message) return;
+        setMessages(prevMessages => [message, ...prevMessages]);
 
         try {
-            // Translate
-            const res = await axios.post('/api/translate', requestData);
-            if (res?.data.translate) {
-                setMessages(prevMessages => [...prevMessages, { role: 'models', content: res.data.translate }]);
-                // Speach
-                console.log(res.data.translate)
-                handleSpeak(res.data.translate);
+            // Chat
+            const response = await axios.post('/api/chat', message);
+            console.log(response);
+            if (response?.data.message) {
+                const botMessage = response?.data.message;
+                botMessage.role = 'models';
+                setMessages(prevMessages => [response.data.message, ...prevMessages]);
             }
         } catch (error) {
             console.error('Error fetching response:', error);
@@ -107,31 +53,11 @@ export default function Home() {
     return (
         <div className="p-4 mb-4">
             <div className="bg-white shadow-md p-4 z-10">
-                <h1>会話アプリ</h1>
-                <input type="text" className="border p-3" />
-                <button className="p-2 bg-blue-500 text-white rounded mt-4">
-                    翻訳(Translate)
-                </button>
-                <div>
-                    <select id="from-language" className="mx-3 p-3" value={fromLang} onChange={handleFromLang}>
-                        {languages.map((language) => (
-                            <option key={language.code} value={language.code}>
-                                {language.name}
-                            </option>
-                        ))}
-                    </select>
-                    →
-                    <select id="to-language" className="mx-3 p-3" value={toLang} onChange={handleToLang}>
-                        {languages.map((language) => (
-                            <option key={language.code} value={language.code}>
-                                {language.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                <button onClick={handleVoiceInput} className="p-2 bg-blue-500 text-white rounded mt-4">
-                    {isListening ? 'Listening...' : '音声入力'}
+                <h1>Chat</h1>
+                <input onChange={handleInputText} type="text" className="border p-3 w-full"
+                    value={message?.content} />
+                <button onClick={handleSubmit} className="bg-blue-600 text-white p-2 rounded">
+                    Send
                 </button>
             </div>
 
@@ -148,7 +74,7 @@ export default function Home() {
                                 text-sm font-semibold
                             ${message.role === 'user' ? 'bg-blue-600' : 'bg-gray-600'}
                         `}>
-                            {message.role === 'user' ? 'あなた' : 'あいて'}
+                            {message.role === 'user' ? 'あなた' : 'Bot'}
                         </span>
                         <span>{message.content}</span>
                     </div>
