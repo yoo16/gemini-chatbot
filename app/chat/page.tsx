@@ -2,13 +2,11 @@
 
 import { useState, useEffect, useRef, ReactElement, ReactHTML } from 'react';
 import axios from 'axios';
-import { Message } from '../interfaces/Message';
-import { languages, getLanguageName } from '@/app/components/Lang';
+import { Message } from '@/app/interfaces/Message';
 
 export default function Home() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [message, setMessage] = useState<Message>();
-
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -33,7 +31,7 @@ export default function Home() {
     const handleSubmit = async () => {
         console.log("handleSubmit:", message)
         if (!message) return;
-        setMessages(prevMessages => [message, ...prevMessages]);
+        setMessages(prevMessages => [...prevMessages, message]);
 
         try {
             // Chat
@@ -42,7 +40,7 @@ export default function Home() {
             if (response?.data.message) {
                 const botMessage = response?.data.message;
                 botMessage.role = 'models';
-                setMessages(prevMessages => [response.data.message, ...prevMessages]);
+                setMessages(prevMessages => [, ...prevMessages, response.data.message]);
             }
         } catch (error) {
             console.error('Error fetching response:', error);

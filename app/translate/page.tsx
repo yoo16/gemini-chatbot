@@ -10,11 +10,16 @@ import { FaMicrophone, FaArrowCircleRight, FaStop, FaSpinner } from 'react-icons
 import { HiMiniSpeakerWave } from 'react-icons/hi2';
 import { AiOutlineOpenAI } from 'react-icons/ai';
 
+const initMessage:Message = {
+    role: 'user',
+    content: '',
+    lang: '',
+}
 
 export default function Home() {
     const [messages, setMessages] = useState<Message[]>([]);
-    const [message, setMessage] = useState<Message>();
-    const [translateMessage, setTranslateMessage] = useState<string>('');
+    const [message, setMessage] = useState<Message>(initMessage);
+    const [translateMessage, setTranslateMessage] = useState<Message>(initMessage);
     const [isListening, setIsListening] = useState<boolean>(false);
     const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -66,6 +71,23 @@ export default function Home() {
         }
     }, [fromLang, toLang]);
 
+    const handleInputText = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const inputText = e.target.value;
+        const message: Message = {
+            role: 'user',
+            content: inputText,
+            lang: fromLang,
+        }
+        setMessage(message);
+    };
+
+    const handleInputSubmit = async () => {
+        console.log("handleSubmit:", message)
+        if (!message) return;
+        handleTranslate(message, toLang);
+        setMessage(initMessage);
+    };
+
     const handleVoiceInput = useCallback(() => {
         if (recognition) {
             recognition.start();
@@ -74,10 +96,10 @@ export default function Home() {
 
     const handleKeyDown = useCallback((event: KeyboardEvent) => {
         if (event.key === ' ') {
-            swapLanguages();
-            event.preventDefault();
-        } else if (event.key === 'Enter') {
             handleVoiceInput();
+            event.preventDefault();
+        } else if (event.key === 'ArrowRight') {
+            swapLanguages();
             event.preventDefault();
         }
     }, [handleVoiceInput, swapLanguages]);
@@ -104,12 +126,11 @@ export default function Home() {
             if (result.error) {
                 setError(result.error);
             } else if (result.message) {
-                const translateMessage = result.message
-                setMessage(translateMessage);
-                translateMessage.role = (message.role === 'partner') ? 'user' : 'partner';
-                setTranslateMessage(translateMessage.content);
-                setMessages(prevMessages => [translateMessage, ...prevMessages]);
-                handleSpeak(translateMessage.content, translateMessage.lang, setError, setIsSpeaking);
+                const newMessage = result.message;
+                newMessage.role = (message.role === 'partner') ? 'user' : 'partner';
+                setTranslateMessage(newMessage);
+                setMessages(prevMessages => [newMessage, ...prevMessages]);
+                handleSpeak(newMessage.content, newMessage.lang, setError, setIsSpeaking);
             }
         } catch (error) {
             setError('Error fetching response:');
@@ -118,7 +139,7 @@ export default function Home() {
         }
     };
 
-    const handleAIAnswer = async (message?: Message) => {
+    const handleAITalk = async (message?: Message) => {
         if (!message) return;
         setIsLoading(true);
         try {
@@ -189,16 +210,22 @@ export default function Home() {
                 )}
 
                 <div className="flex space-x-4 mt-4">
-                    <button onClick={handleVoiceInput} className="p-2 bg-blue-500 text-white rounded">
+                    <input onChange={handleInputText} type="text" className="border p-2 w-full"
+                        value={message?.content} />
+                    <button onClick={handleInputSubmit} className="bg-blue-600 text-white p-2 px-4 rounded">
+                        Send
+                    </button>
+
+                    <button onClick={handleVoiceInput} className="p-2">
                         {isListening ? 'Listening...' : <FaMicrophone />}
                     </button>
 
-                    <button onClick={() => handleAIAnswer(message)}
+                    <button onClick={() => handleAITalk(translateMessage)}
                         className="mx-1 px-2 rounded text-ms"
                     >
                         <AiOutlineOpenAI />
                     </button>
-                    {isSpeaking && (
+                    {translateMessage && isSpeaking && (
                         <button onClick={stopSpeech} className="p-2 bg-red-500 text-white rounded">
                             <FaStop />
                         </button>
@@ -208,7 +235,7 @@ export default function Home() {
                 {translateMessage &&
                     <div className="text-3xl my-3 p-5 bg-gray-100 text-gray-800">
                         <div>
-                            {translateMessage}
+                            {translateMessage.content}
                         </div>
                     </div>
                 }
